@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Build & Scripts | Photo Uploader</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #36393f; color: #fff; display: flex; justify-content: center; padding: 20px; }
+        .box { background: #2f3136; padding: 25px; border-radius: 10px; width: 480px; border: 1px solid #4f545c; box-shadow: 0 10px 25px rgba(0,0,0,0.4); }
+        h2 { text-align: center; color: #5865f2; margin-top: 0; }
+        label { display: block; font-size: 11px; color: #b9bbbe; text-transform: uppercase; font-weight: bold; margin-top: 15px; margin-bottom: 5px; }
+        input, textarea { width: 100%; padding: 10px; border-radius: 4px; border: none; background: #40444b; color: #fff; box-sizing: border-box; }
+        input[type="file"] { background: #32353b; padding: 8px; border: 1px dashed #5865f2; cursor: pointer; }
+        button { width: 100%; padding: 15px; background: #5865f2; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; margin-top: 20px; font-size: 16px; transition: 0.2s; }
+        button:hover { background: #4752c4; }
+        button:disabled { background: #4f545c; cursor: not-allowed; }
+        #status { text-align: center; font-size: 14px; margin-top: 15px; font-weight: bold; min-height: 20px; }
+    </style>
+</head>
+<body>
+
+<div class="box">
+    <h2>🚀 B&S | Post with Image</h2>
+    
+    <label>Токен Бота</label>
+    <input type="password" id="token" placeholder="Ваш Bot Token">
+
+    <label>ID Канала</label>
+    <input type="text" id="channelId" placeholder="Channel ID">
+
+    <label>Заголовок и Описание</label>
+    <input type="text" id="title" placeholder="Заголовок объявления">
+    <textarea id="desc" rows="4" placeholder="Текст поста..."></textarea>
+
+    <label>📸 Загрузить фото с ПК</label>
+    <input type="file" id="fileInput" accept="image/*">
+
+    <label>Кнопка-ссылка</label>
+    <div style="display: flex; gap: 10px;">
+        <input type="text" id="btnT" placeholder="Текст (Купить)">
+        <input type="text" id="btnU" placeholder="Ссылка (https://...)">
+    </div>
+
+    <button id="mainBtn">ОПУБЛИКОВАТЬ В DISCORD</button>
+    <div id="status"></div>
+</div>
+
+<script>
+    document.getElementById('mainBtn').addEventListener('click', async () => {
+        const btn = document.getElementById('mainBtn');
+        const status = document.getElementById('status');
+        
+        const token = document.getElementById('token').value.trim();
+        const channelId = document.getElementById('channelId').value.trim();
+        const title = document.getElementById('title').value;
+        const desc = document.getElementById('desc').value;
+        const bText = document.getElementById('btnT').value;
+        const bUrl = document.getElementById('btnU').value;
+        const fileInput = document.getElementById('fileInput');
+
+        if (!token || !channelId) {
+            status.innerText = "❌ Заполни Токен и ID Канала!";
+            status.style.color = "#f04747";
+            return;
+        }
+
+        btn.disabled = true;
+        btn.innerText = "ЗАГРУЗКА...";
+        status.innerText = "Отправка данных в Discord...";
+        status.style.color = "#b9bbbe";
+
+        // Собираем данные для Embed
+        const embed = {
+            title: title || null,
+            description: desc || null,
+            color: 5793266,
+            footer: { text: "Build & Scripts Shop" },
+            timestamp: new Date().toISOString()
+        };
+
+        // Если есть файл, добавляем его в embed
+        if (fileInput.files.length > 0) {
+            embed.image = { url: 'attachment://image.png' };
+        }
+
+        const components = (bText && bUrl) ? [{
+            type: 1,
+            components: [{ type: 2, style: 5, label: bText, url: bUrl }]
+        }] : [];
+
+        // Создаем FormData для отправки файла
+        const formData = new FormData();
+        const payloadJson = JSON.stringify({
+            embeds: [embed],
+            components: components
+        });
+
+        formData.append('payload_json', payloadJson);
+        
+        if (fileInput.files.length > 0) {
+            formData.append('files[0]', fileInput.files[0], 'image.png');
+        }
+
+        try {
+            const res = await fetch(`https://discord.com{channelId}/messages`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bot ${token}` },
+                body: formData
+            });
+
+            if (res.ok) {
+                status.innerText = "✅ Пост успешно опубликован!";
+                status.style.color = "#43b581";
+            } else {
+                const err = await res.json();
+                status.innerText = "❌ Ошибка: " + (err.message || "проверьте данные");
+                status.style.color = "#f04747";
+            }
+        } catch (e) {
+            status.innerText = "❌ Ошибка сети! Проверьте интернет.";
+            status.style.color = "#f04747";
+        } finally {
+            btn.disabled = false;
+            btn.innerText = "ОПУБЛИКОВАТЬ В DISCORD";
+        }
+    });
+</script>
+
+</body>
+</html>
